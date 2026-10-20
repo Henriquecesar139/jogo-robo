@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>robô - Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="menu">
+
+        <header class="hero">
+            <div class="hero-robo" aria-hidden="true">🤖</div>
+            <h1>Jogo do Robô</h1>
+            <p class="lead">
+                Um jogo de lógica de programação. Dê ordens ao robô, passo a passo,
+                para levá-lo até a lâmpada 💡 sem cair nos buracos 🕳️.
+            </p>
+        </header>
+
+        <section class="como-jogar" aria-labelledby="como-titulo">
+            <h2 id="como-titulo">Como jogar</h2>
+            <ol class="passos">
+                <li><span>1</span> Monte o programa com os botões de comando.</li>
+                <li><span>2</span> Aperte Executare veja o robô obedecer.</li>
+                <li><span>3</span> Chegou na lâmpada? Use Acender e vença!</li>
+            </ol>
+            <p class="dica">Errou? Sem problema: o botão <strong>Reiniciar</strong> limpa tudo para você tentar de novo.</p>
+        </section>
+
+        <section aria-labelledby="niveis-titulo">
+            <h2 id="niveis-titulo">Escolha um nível</h2>
+            <div id="niveis" class="niveis"></div>
+        </section>
+
+        <footer class="rodape">Aprenda sequências, repetições e condições jogando 🧠</footer>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

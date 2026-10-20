@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo do Robô - Nível 4</title>
+    <link rel="stylesheet" href="nv4.css">
+</head>
+
+<body>
+    <main class="jogo">
+
+        <header class="topo">
+            <h1>🤖 Robô - Nível 4</h1>
+            <p>Atravesse a escada de pedra sem cair no abismo 🕳️ — use repetições 🔁</p>
+        </header>
+
+        <section class="palco">
+            <canvas id="tabuleiro" width="560" height="430" aria-label="Tabuleiro isométrico 3D"></canvas>
+        </section>
+
+        <aside class="painel">
+            <h2>Programa</h2>
+            <div id="programa"></div>
+
+            <div class="botoes">
+                <button class="cmd cmd-frente" onclick="adicionarComando('frente')"><span>⬆️</span>Frente</button>
+                <button class="cmd cmd-esquerda" onclick="adicionarComando('esquerda')"><span>↩️</span>Esquerda</button>
+                <button class="cmd cmd-direita" onclick="adicionarComando('direita')"><span>↪️</span>Direita</button>
+                <button class="cmd cmd-acender" onclick="adicionarComando('acender')"><span>💡</span>Acender</button>
+            </div>
+
+            <h2 class="sub">Repetição</h2>
+            <div class="loops dois">
+                <button class="loop" onclick="adicionarComando('repetir2')">🔁 Repetir 2x</button>
+                <button class="loop" onclick="adicionarComando('repetir3')">🔁 Repetir 3x</button>
+                <button class="loop" onclick="adicionarComando('repetirAte')">🔁 Até 💡</button>
+                <button class="loop" onclick="adicionarComando('fimRepetir')">🛑 Fim Repetir</button>
+            </div>
+
+            <div class="controles">
+                <button class="exec" onclick="executar()">▶ Executar</button>
+                <button class="sec" onclick="reiniciar()">🔄 Reiniciar</button>
+            </div>
+
+            <p id="mensagem"></p>
+        </aside>
+
+    </main>
+
+        <!-- Janela de aviso -->
+    <div id="aviso" class="aviso-fundo" role="dialog" aria-modal="true" aria-labelledby="aviso-titulo" hidden>
+        <div class="aviso-janela">
+            <button class="aviso-fechar" onclick="fecharAviso()" aria-label="Fechar">✕</button>
+            <h2 id="aviso-titulo"></h2>
+            <p id="aviso-texto"></p>
+            <button class="aviso-ok" onclick="fecharAviso()">Entendi</button>
+        </div>
+    </div>
+
+    <!-- Janela de vitória -->
+    <div id="vitoria" class="aviso-fundo" role="dialog" aria-modal="true" aria-labelledby="vitoria-titulo" hidden>
+        <div class="aviso-janela">
+            <button class="aviso-fechar" onclick="fecharVitoria()" aria-label="Fechar">✕</button>
+            <h2 id="vitoria-titulo">🎉 Parabéns!</h2>
+            <p>Mais um nível concluído!!</p>
+            <a class="aviso-ok" href="../nv5/nv5.html">Próximo nível ➜</a>
+        </div>
+    </div>
+    
+    <script src="nv4.js"></script>
+</body>
+</html>

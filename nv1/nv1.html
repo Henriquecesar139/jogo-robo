@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo do Robô</title>
+    <link rel="stylesheet" href="nv1.css">
+</head>
+
+<body>
+    <main class="jogo">
+
+        <header class="topo">
+            <h1>🤖 Robô</h1>
+            <p>Monte um algoritmo para levar o robô até a lâmpada 💡</p>
+        </header>
+
+        <section class="palco">
+            <canvas id="tabuleiro" width="560" height="430" aria-label="Tabuleiro isométrico 3D"></canvas>
+        </section>
+
+        <aside class="painel">
+            <h2>Programa</h2>
+            <div id="programa"></div>
+
+            <div class="botoes">
+                <button class="cmd cmd-frente" onclick="adicionarComando('frente')"><span>⬆️</span>Frente</button>
+                <button class="cmd cmd-esquerda" onclick="adicionarComando('esquerda')"><span>↩️</span>Esquerda</button>
+                <button class="cmd cmd-direita" onclick="adicionarComando('direita')"><span>↪️</span>Direita</button>
+                <button class="cmd cmd-acender" onclick="adicionarComando('acender')"><span>💡</span>Acender</button>
+            </div>
+
+            <div class="controles">
+                <button class="exec" onclick="executar()">▶ Executar</button>
+                <button class="sec" onclick="limparPrograma()">🗑️ Limpar</button>
+                <button class="sec" onclick="reiniciar()">🔄 Reiniciar</button>
+            </div>
+
+            <p id="mensagem"></p>
+        </aside>
+
+            <!-- Janela de aviso -->
+    <div id="aviso" class="aviso-fundo" role="dialog" aria-modal="true" aria-labelledby="aviso-titulo" hidden>
+        <div class="aviso-janela">
+            <button class="aviso-fechar" onclick="fecharAviso()" aria-label="Fechar">✕</button>
+            <h2 id="aviso-titulo"></h2>
+            <p id="aviso-texto"></p>
+            <button class="aviso-ok" onclick="fecharAviso()">Entendi</button>
+        </div>
+    </div>
+
+    </main>
+
+
+        <!-- Janela de vitória -->
+    <div id="vitoria" class="aviso-fundo" role="dialog" aria-modal="true" aria-labelledby="vitoria-titulo" hidden>
+        <div class="aviso-janela">
+            <button class="aviso-fechar" onclick="fecharVitoria()" aria-label="Fechar">✕</button>
+            <h2 id="vitoria-titulo">🎉 Parabéns!</h2>
+            <p>Você acendeu a lâmpada e completou este nível!!!</p>
+            <a class="aviso-ok" href="../nv2/nv2.html">Próximo nível ➜</a>
+        </div>
+    </div>
+
+    <script src="nv1.js"></script>
+</body>
+</html>
