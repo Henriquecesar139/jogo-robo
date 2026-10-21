@@ -56,8 +56,8 @@ const OY = 100;          // origem Y
 // Estado visual (interpolado para animar suavemente)
 let visual = { linha: robo.linha, coluna: robo.coluna, angulo: 0 };
 let anguloAlvo = 0;
-let queda = 0;
-let saltoInicio = -9999;   // instante do último pulo   // progresso da queda no buraco
+let queda = 0;   // progresso da queda no buraco
+
 
 // Projeção: linha/coluna (em unidades de tile) + altura z (px) -> tela
 function proj(l, c, z = 0) {
@@ -156,9 +156,7 @@ function desenharLampada(t) {
 function desenharRobo() {
     const l = visual.linha + .5, c = visual.coluna + .5;
     const dl = -Math.cos(visual.angulo), dc = Math.sin(visual.angulo);
-    const k = (performance.now() - saltoInicio) / 450;
-    const salto = k < 1 ? Math.sin(k * Math.PI) * 38 : 0;
-    const quica = Math.abs(Math.sin(performance.now() / 300)) * 1.5 - queda + salto;
+    const quica = Math.abs(Math.sin(performance.now() / 300)) * 1.5 - queda;
     ctx.save();
     ctx.globalAlpha = Math.max(0, 1 - queda / 60);
 
@@ -228,56 +226,278 @@ requestAnimationFrame(quadro);
 
 
 // -------------------------
-// ADICIONAR COMANDO
+// ADICIONAR / REMOVER / REINICIAR
 // -------------------------
 
-function adicionarComando(comando) {
-    if (executando || venceu || caiuNoBuraco) return;
+const LIMITE_COMANDOS = 12;
 
-    if (programa.length >= 12) {
-        mostrarMensagem("Máximo de 12 comandos!");
+// Ao editar o programa, o robô volta ao início e o estado da fase é zerado
+function prepararEdicao() {
+    indicesAbertos = [];
+    fecharVitoria();
+    robo = { ...posicaoInicial };
+    venceu = false;
+    caiuNoBuraco = false;
+    posicionarRoboImediato();
+    mostrarMensagem("");
+}
+
+function adicionarComando(comando, indice = programa.length) {
+    if (executando) return false;
+
+    prepararEdicao();
+
+    if (programa.length >= LIMITE_COMANDOS) {
+        mostrarMensagem(`Máximo de ${LIMITE_COMANDOS} comandos!`);
+        return false;
+    }
+
+    programa.splice(indice, 0, comando);
+    mostrarPrograma();
+    return true;
+}
+
+function removerUltimo() {
+    if (executando) return;
+
+    if (programa.length === 0) {
+        mostrarMensagem("Não há comandos para remover.");
         return;
     }
 
-    programa.push(comando);
+    prepararEdicao();
+    programa.pop();
+    mostrarPrograma();
+}
+
+function reiniciar() {
+    contadorExec++;        // cancela qualquer execução em andamento
+    executando = false;
+    programa = [];         // apaga todos os comandos
+    prepararEdicao();      // robô na posição inicial, sem mensagens
     mostrarPrograma();
 }
 
 
 // -------------------------
-// MOSTRAR PROGRAMA
+// VERIFICAR BLOCOS ABERTOS (repetição / condição)
 // -------------------------
+
+const ABRE = { repetirAte: "repetição", seBuraco: "condição" };
+const FECHA = { fimRepetir: "repetição", fimSe: "condição" };
+const BOTAO_FECHAR = { "repetição": "🛑 Fim Repetir", "condição": "🛑 Fim Se" };
+const PLURAL = { "repetição": "repetições", "condição": "condições" };
+
+let indicesAbertos = [];   // posições dos blocos sem fechamento (ficam em vermelho)
+
+// Devolve null se estiver tudo fechado, ou { indices, resumo, texto }
+function verificarBlocos(cmds) {
+    const abertos = [];       // pilha de { tipo, indice }
+    const esquecidos = [];    // blocos que ficaram abertos dentro de outro que foi fechado
+
+    cmds.forEach((c, indice) => {
+        if (ABRE[c]) {
+            abertos.push({ tipo: ABRE[c], indice });
+        } else if (FECHA[c]) {
+            const pos = abertos.map(b => b.tipo).lastIndexOf(FECHA[c]);
+            if (pos !== -1) esquecidos.push(...abertos.splice(pos).slice(1));   // fecha este bloco
+        }
+    });
+
+    const semFim = [...esquecidos, ...abertos];
+    if (semFim.length === 0) return null;
+
+    const tipos = [...new Set(semFim.map(b => b.tipo))];
+    const partes = tipos.map(t => {
+        const n = semFim.filter(b => b.tipo === t).length;
+        return `${n} ${n === 1 ? t : PLURAL[t]}`;
+    });
+    const botoes = tipos.map(t => BOTAO_FECHAR[t]);
+
+    return {
+        indices: semFim.map(b => b.indice),
+        resumo: `Falta fechar ${partes.join(" e ")}!`,
+        texto: `Você deixou ${partes.join(" e ")} sem fechar. ` +
+               `Adicione ${botoes.join(" e ")} no fim do bloco e tente de novo.`
+    };
+}
+
+
+// -------------------------
+// MOSTRAR PROGRAMA (um comando embaixo do outro)
+// -------------------------
+
+const ROTULOS = {
+    frente: "⬆️ Frente",
+    esquerda: "↩️ Esquerda",
+    direita: "↪️ Direita",
+    acender: "💡 Acender",
+    repetirAte: "🔁 Até 💡 {",
+    fimRepetir: "🛑 Fim Repetir }",
+    seBuraco: "❓ Se 🕳️ à frente {",
+    fimSe: "🛑 Fim Se }"
+};
 
 function mostrarPrograma() {
     const elemento = document.getElementById("programa");
     elemento.innerHTML = "";
 
-    const simbolos = {
-        frente: "⬆️ Frente",
-        esquerda: "↩️ Esquerda",
-        direita: "↪️ Direita",
-        acender: "💡 Acender",
-        repetirAte: "🔁 Até 💡 {",
-        seBuraco: "❓ Se 🕳️ à frente {",
-        senao: "↔️ Senão {",
-        fimSe: "🛑 Fim Se }",
-        fimRepetir: "🛑 Fim Repetir }"
-    };
+    let nivel = 0;   // recuo: comandos dentro de um bloco ficam deslocados
 
     programa.forEach((comando, indice) => {
-        const elementoComando = document.createElement("div");
-        elementoComando.classList.add("comando");
-        if (comando === "fimRepetir" || comando.startsWith("repetir")) {
-            elementoComando.classList.add("comando-loop");
-        } else if (comando === "seBuraco" || comando === "senao") {
-            elementoComando.classList.add("comando-se");
-        } else if (comando === "fimSe") {
-            elementoComando.classList.add("comando-se");
-        }
-        elementoComando.innerText = `${indice + 1}. ${simbolos[comando]}`;
-        elemento.appendChild(elementoComando);
+        if (FECHA[comando]) nivel = Math.max(0, nivel - 1);
+
+        const item = document.createElement("div");
+        item.className = "comando";
+        if (comando.startsWith("repetir") || comando === "fimRepetir") item.classList.add("comando-loop");
+        else if (comando === "seBuraco" || comando === "fimSe") item.classList.add("comando-se");
+        item.dataset.indice = indice;
+        if (indicesAbertos.includes(indice)) item.classList.add("erro");
+        item.style.marginLeft = `${Math.min(nivel, 3) * 18}px`;
+        item.innerHTML =
+            `<span class="alca" title="Arraste para mover" aria-hidden="true">⋮⋮</span>` +
+            `<span class="num">${indice + 1}</span>` +
+            `<span class="txt">${ROTULOS[comando]}</span>`;
+        elemento.appendChild(item);
+
+        if (ABRE[comando]) nivel++;
     });
 }
+
+
+// -------------------------
+// ARRASTAR E SOLTAR (mouse e toque)
+// -------------------------
+// 1) Arraste um comando da lista da esquerda para a área "Programa".
+// 2) Arraste pela alça ⋮⋮ para reordenar; solte fora da área para remover.
+// 3) Teclado: Enter/Espaço no botão do comando adiciona no final.
+
+let arraste = null;   // { comando, origem, x, y, ativo, fantasma, indice }
+
+function iniciarArraste(e, comando, origem) {
+    if (executando) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    arraste = { comando, origem, x: e.clientX, y: e.clientY, ativo: false, fantasma: null, indice: null };
+
+    window.addEventListener("pointermove", moverArraste);
+    window.addEventListener("pointerup", soltarArraste);
+    window.addEventListener("pointercancel", finalizarArraste);
+}
+
+function moverArraste(e) {
+    if (!arraste) return;
+
+    if (!arraste.ativo) {
+        // só começa a arrastar depois de mover alguns pixels
+        if (Math.hypot(e.clientX - arraste.x, e.clientY - arraste.y) < 6) return;
+
+        arraste.ativo = true;
+
+        const fantasma = document.createElement("div");
+        fantasma.className = "fantasma";
+        fantasma.textContent = ROTULOS[arraste.comando];
+        document.body.appendChild(fantasma);
+        arraste.fantasma = fantasma;
+
+        document.body.classList.add("arrastando");
+
+        if (arraste.origem !== null) {
+            const itens = document.getElementById("programa").children;
+            if (itens[arraste.origem]) itens[arraste.origem].classList.add("arrastado");
+        }
+    }
+
+    arraste.fantasma.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 12}px)`;
+    atualizarAlvo(e.clientX, e.clientY);
+}
+
+function limparMarcas() {
+    document.querySelectorAll("#programa .marca-antes, #programa .marca-depois").forEach(item => {
+        item.classList.remove("marca-antes", "marca-depois");
+    });
+}
+
+// Descobre em que posição da lista o comando seria solto
+function atualizarAlvo(x, y) {
+    const lista = document.getElementById("programa");
+    const caixa = lista.getBoundingClientRect();
+    const sobre = x >= caixa.left && x <= caixa.right && y >= caixa.top && y <= caixa.bottom;
+
+    limparMarcas();
+    lista.classList.toggle("sobre", sobre);
+    arraste.indice = null;
+
+    if (!sobre) return;
+
+    const itens = [...lista.children];
+    let indice = itens.findIndex(item => {
+        const r = item.getBoundingClientRect();
+        return y < r.top + r.height / 2;
+    });
+    if (indice === -1) indice = itens.length;
+
+    arraste.indice = indice;
+
+    if (indice < itens.length) itens[indice].classList.add("marca-antes");
+    else if (itens.length) itens[itens.length - 1].classList.add("marca-depois");
+}
+
+function finalizarArraste() {
+    window.removeEventListener("pointermove", moverArraste);
+    window.removeEventListener("pointerup", soltarArraste);
+    window.removeEventListener("pointercancel", finalizarArraste);
+
+    if (arraste && arraste.fantasma) arraste.fantasma.remove();
+    document.body.classList.remove("arrastando");
+
+    const lista = document.getElementById("programa");
+    lista.classList.remove("sobre");
+    limparMarcas();
+    [...lista.children].forEach(item => item.classList.remove("arrastado"));
+
+    arraste = null;
+}
+
+function soltarArraste() {
+    const a = arraste;
+    finalizarArraste();
+
+    if (!a || !a.ativo || executando) return;
+
+    if (a.origem === null) {
+        // veio da lista de comandos: insere onde foi solto
+        if (a.indice !== null) adicionarComando(a.comando, a.indice);
+        return;
+    }
+
+    // veio do programa: reordena (ou remove, se solto fora da área)
+    programa.splice(a.origem, 1);
+    if (a.indice !== null) {
+        const destino = a.indice > a.origem ? a.indice - 1 : a.indice;
+        programa.splice(destino, 0, a.comando);
+    }
+    prepararEdicao();
+    mostrarPrograma();
+}
+
+document.querySelectorAll("[data-comando]").forEach(botao => {
+    botao.addEventListener("pointerdown", e => iniciarArraste(e, botao.dataset.comando, null));
+    botao.addEventListener("click", e => {
+        if (e.detail === 0) adicionarComando(botao.dataset.comando);   // clique vindo do teclado
+    });
+});
+
+document.getElementById("programa").addEventListener("pointerdown", e => {
+    const alca = e.target.closest(".alca");
+    if (!alca) return;
+    const indice = Number(alca.closest(".comando").dataset.indice);
+    iniciarArraste(e, programa[indice], indice);
+    e.preventDefault();
+});
+
+
+// -------------------------
 
 
 // -------------------------
@@ -394,6 +614,16 @@ async function executar() {
         return;
     }
 
+    // Bloco aberto e não fechado: avisa e não executa
+    const problema = verificarBlocos(programa);
+    if (problema) {
+        indicesAbertos = problema.indices;
+        mostrarPrograma();
+        mostrarMensagem("⚠️ " + problema.resumo);
+        mostrarAviso("Falta fechar!", problema.texto);
+        return;
+    }
+
     // Sempre começa da posição inicial
     robo = { ...posicaoInicial };
     venceu = false;
@@ -479,25 +709,6 @@ function acender() {
 
 
 // -------------------------
-// REINICIAR
-// -------------------------
-
-function reiniciar() {
-    fecharVitoria();
-    contadorExec++;        // cancela qualquer execução em andamento
-    executando = false;
-    robo = { ...posicaoInicial };
-    programa = [];
-    venceu = false;
-    caiuNoBuraco = false;
-
-    mostrarPrograma();
-    posicionarRoboImediato();
-    mostrarMensagem("");
-}
-
-
-// -------------------------
 // UTILIDADE
 // -------------------------
 
@@ -554,4 +765,4 @@ document.getElementById("vitoria").addEventListener("click", e => {
 });
 
 // Aviso ao abrir o nível (troque o texto ou apague esta linha)
-mostrarAviso("Nível 5", "Agora iremos usar estruturas de repetição e de condição para resolver problemas mais complexos.");
+mostrarAviso("Nível 5", "As condicionais são estruturas de decisão que permitem ao programa tomar decisões com base em uma condição, funcionando sob a lógica de que, se a condição for verdadeira, o código executa uma ação específica e, se for falsa, executa outra. Elas ajudam diretamente as estruturas de repetição ao dar inteligência aos ciclos, permitindo controlar o momento exato de parar a repetição (por exemplo, repetir um movimento apenas enquanto não chegar ao fim) ou tomar decisões a cada ciclo realizado, como checar o ambiente em tempo real para desviar de um buraco a cada passo dado pelo robô.");

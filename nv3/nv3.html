@@ -20,26 +20,38 @@
         </section>
 
         <aside class="painel">
-            <h2>Programa</h2>
-            <div id="programa"></div>
 
-            <div class="botoes">
-                <button class="cmd cmd-frente" onclick="adicionarComando('frente')"><span>⬆️</span>Frente</button>
-                <button class="cmd cmd-esquerda" onclick="adicionarComando('esquerda')"><span>↩️</span>Esquerda</button>
-                <button class="cmd cmd-direita" onclick="adicionarComando('direita')"><span>↪️</span>Direita</button>
-                <button class="cmd cmd-acender" onclick="adicionarComando('acender')"><span>💡</span>Acender</button>
-            </div>
+            <div class="editor">
 
-            <h2 class="sub">Repetição (loop)</h2>
-            <div class="loops">
-                <button class="loop" onclick="adicionarComando('repetir2')">🔁 Repetir 2x</button>
-                <button class="loop" onclick="adicionarComando('repetir3')">🔁 Repetir 3x</button>
-                <button class="loop" onclick="adicionarComando('fimRepetir')">🛑 Fim</button>
+                <!-- Comandos: arraste para a área "Programa" -->
+                <div class="paleta">
+                    <h2>Comandos</h2>
+                    <div class="botoes">
+                        <button class="cmd cmd-frente" data-comando="frente"><span>⬆️</span>Frente</button>
+                        <button class="cmd cmd-esquerda" data-comando="esquerda"><span>↩️</span>Esquerda</button>
+                        <button class="cmd cmd-direita" data-comando="direita"><span>↪️</span>Direita</button>
+                        <button class="cmd cmd-acender" data-comando="acender"><span>💡</span>Acender</button>
+                    </div>
+
+                    <h2 class="sub">Repetição (loop)</h2>
+                    <div class="loops">
+                        <button class="loop" data-comando="repetir2">🔁 Repetir 2x</button>
+                        <button class="loop" data-comando="repetir3">🔁 Repetir 3x</button>
+                        <button class="loop" data-comando="fimRepetir">🛑 Fechar</button>
+                    </div>
+                </div>
+
+                <!-- Programa: um comando embaixo do outro -->
+                <div class="coluna-programa">
+                    <h2>Programa</h2>
+                    <div id="programa" aria-label="Programa: solte os comandos aqui"></div>
+                </div>
+
             </div>
 
             <div class="controles">
                 <button class="exec" onclick="executar()">▶ Executar</button>
-                <button class="sec" onclick="limparPrograma()">🗑️ Limpar</button>
+                <button class="sec" onclick="removerUltimo()">⌫ Remover último</button>
                 <button class="sec" onclick="reiniciar()">🔄 Reiniciar</button>
             </div>
 

@@ -38,7 +38,7 @@ const niveis = [
     {
         numero: 4,
         titulo: "A escada",
-        conceito: "Repetição e Condição",
+        conceito: "Repetição",
         descricao: "Use as estruturas de repetição para concluir esse nível",
         icone: "🪜",
         dificuldade: "Médio",
@@ -49,7 +49,7 @@ const niveis = [
     {
         numero: 5,
         titulo: "Continue repetindo",
-        conceito: "Repetição",
+        conceito: "Repetição e condição",
         descricao: "Mais estruturas de repetição",
         icone: "🔁",
         dificuldade: "Difícil",

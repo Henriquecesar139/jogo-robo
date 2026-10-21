@@ -20,35 +20,48 @@
         </section>
 
         <aside class="painel">
-            <h2>Programa</h2>
-            <div id="programa"></div>
 
-            <div class="botoes">
-                <button class="cmd cmd-frente" onclick="adicionarComando('frente')"><span>⬆️</span>Frente</button>
-                <button class="cmd cmd-esquerda" onclick="adicionarComando('esquerda')"><span>↩️</span>Esquerda</button>
-                <button class="cmd cmd-direita" onclick="adicionarComando('direita')"><span>↪️</span>Direita</button>
-                <button class="cmd cmd-acender" onclick="adicionarComando('acender')"><span>💡</span>Acender</button>
-            </div>
+            <div class="editor">
 
-            <h2 class="sub">Repetição</h2>
-            <div class="loops dois">
-                <button class="loop" onclick="adicionarComando('repetirAte')">🔁 Até 💡</button>
-                <button class="loop" onclick="adicionarComando('fimRepetir')">🛑 Fim Repetir</button>
-            </div>
+                <!-- Comandos: arraste para a área "Programa" -->
+                <div class="paleta">
+                    <h2>Comandos</h2>
+                    <div class="botoes">
+                        <button class="cmd cmd-frente" data-comando="frente"><span>⬆️</span>Frente</button>
+                        <button class="cmd cmd-esquerda" data-comando="esquerda"><span>↩️</span>Esquerda</button>
+                        <button class="cmd cmd-direita" data-comando="direita"><span>↪️</span>Direita</button>
+                        <button class="cmd cmd-acender" data-comando="acender"><span>💡</span>Acender</button>
+                    </div>
 
-            <h2 class="sub">Condição</h2>
-            <div class="loops dois">
-                <button class="cond" onclick="adicionarComando('seBuraco')">❓ Se 🕳️ à frente</button>
-                <button class="cond" onclick="adicionarComando('fimSe')">🛑 Fim Se</button>
-            </div>
+                    <h2 class="sub">Repetição</h2>
+                    <div class="loops dois">
+                        <button class="loop" data-comando="repetirAte">🔁 Até 💡</button>
+                        <button class="loop" data-comando="fimRepetir">🛑 Fim Repetir</button>
+                    </div>
 
-            <h2 class="sub">Movimento especial</h2>
-            <div class="loops um">
-                <button class="pulo" onclick="adicionarComando('pular')">🦘 Pular</button>
+                    <h2 class="sub">Condição</h2>
+                    <div class="loops dois">
+                        <button class="cond" data-comando="seBuraco">❓ Se 🕳️ à frente</button>
+                        <button class="cond" data-comando="fimSe">🛑 Fim Se</button>
+                    </div>
+
+                    <h2 class="sub">Movimento especial</h2>
+                    <div class="loops um">
+                        <button class="pulo" data-comando="pular">🦘 Pular</button>
+                    </div>
+                </div>
+
+                <!-- Programa: um comando embaixo do outro -->
+                <div class="coluna-programa">
+                    <h2>Programa</h2>
+                    <div id="programa" aria-label="Programa: solte os comandos aqui"></div>
+                </div>
+
             </div>
 
             <div class="controles">
                 <button class="exec" onclick="executar()">▶ Executar</button>
+                <button class="sec" onclick="removerUltimo()">⌫ Remover último</button>
                 <button class="sec" onclick="reiniciar()">🔄 Reiniciar</button>
             </div>
 

@@ -220,44 +220,220 @@ requestAnimationFrame(quadro);
 
 
 // -------------------------
-// ADICIONAR COMANDO
+// ADICIONAR / REMOVER / REINICIAR
 // -------------------------
 
-function adicionarComando(comando) {
-    if (executando || venceu || caiuNoBuraco) return;
+const LIMITE_COMANDOS = 10;
+let contadorExec = 0;   // muda a cada execução/reinício para cancelar a execução antiga
 
-    if (programa.length >= 10) {
-        mostrarMensagem("Máximo de 10 comandos!");
+// Ao editar o programa, o robô volta ao início e o estado da fase é zerado
+function prepararEdicao() {
+    fecharVitoria();
+    robo = { ...posicaoInicial };
+    venceu = false;
+    caiuNoBuraco = false;
+    posicionarRoboImediato();
+    mostrarMensagem("");
+}
+
+function adicionarComando(comando, indice = programa.length) {
+    if (executando) return false;
+
+    prepararEdicao();
+
+    if (programa.length >= LIMITE_COMANDOS) {
+        mostrarMensagem(`Máximo de ${LIMITE_COMANDOS} comandos!`);
+        return false;
+    }
+
+    programa.splice(indice, 0, comando);
+    mostrarPrograma();
+    return true;
+}
+
+function removerUltimo() {
+    if (executando) return;
+
+    if (programa.length === 0) {
+        mostrarMensagem("Não há comandos para remover.");
         return;
     }
 
-    programa.push(comando);
+    prepararEdicao();
+    programa.pop();
+    mostrarPrograma();
+}
+
+function reiniciar() {
+    contadorExec++;        // cancela qualquer execução em andamento
+    executando = false;
+    programa = [];         // apaga todos os comandos
+    prepararEdicao();      // robô na posição inicial, sem mensagens
     mostrarPrograma();
 }
 
 
 // -------------------------
-// MOSTRAR PROGRAMA
+// MOSTRAR PROGRAMA (um comando embaixo do outro)
 // -------------------------
+
+const ROTULOS = {
+    frente: "⬆️ Frente",
+    esquerda: "↩️ Esquerda",
+    direita: "↪️ Direita",
+    acender: "💡 Acender"
+};
 
 function mostrarPrograma() {
     const elemento = document.getElementById("programa");
     elemento.innerHTML = "";
 
-    const simbolos = {
-        frente: "⬆️ Frente",
-        esquerda: "↩️ Esquerda",
-        direita: "↪️ Direita",
-        acender: "💡 Acender"
-    };
-
     programa.forEach((comando, indice) => {
-        const elementoComando = document.createElement("div");
-        elementoComando.classList.add("comando");
-        elementoComando.innerText = `${indice + 1}. ${simbolos[comando]}`;
-        elemento.appendChild(elementoComando);
+        const item = document.createElement("div");
+        item.className = "comando";
+        item.dataset.indice = indice;
+        item.innerHTML =
+            `<span class="alca" title="Arraste para mover" aria-hidden="true">⋮⋮</span>` +
+            `<span class="num">${indice + 1}</span>` +
+            `<span class="txt">${ROTULOS[comando]}</span>`;
+        elemento.appendChild(item);
     });
 }
+
+
+// -------------------------
+// ARRASTAR E SOLTAR (mouse e toque)
+// -------------------------
+// 1) Arraste um comando da lista da esquerda para a área "Programa".
+// 2) Arraste pela alça ⋮⋮ para reordenar; solte fora da área para remover.
+// 3) Teclado: Enter/Espaço no botão do comando adiciona no final.
+
+let arraste = null;   // { comando, origem, x, y, ativo, fantasma, indice }
+
+function iniciarArraste(e, comando, origem) {
+    if (executando) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    arraste = { comando, origem, x: e.clientX, y: e.clientY, ativo: false, fantasma: null, indice: null };
+
+    window.addEventListener("pointermove", moverArraste);
+    window.addEventListener("pointerup", soltarArraste);
+    window.addEventListener("pointercancel", finalizarArraste);
+}
+
+function moverArraste(e) {
+    if (!arraste) return;
+
+    if (!arraste.ativo) {
+        // só começa a arrastar depois de mover alguns pixels
+        if (Math.hypot(e.clientX - arraste.x, e.clientY - arraste.y) < 6) return;
+
+        arraste.ativo = true;
+
+        const fantasma = document.createElement("div");
+        fantasma.className = "fantasma";
+        fantasma.textContent = ROTULOS[arraste.comando];
+        document.body.appendChild(fantasma);
+        arraste.fantasma = fantasma;
+
+        document.body.classList.add("arrastando");
+
+        if (arraste.origem !== null) {
+            const itens = document.getElementById("programa").children;
+            if (itens[arraste.origem]) itens[arraste.origem].classList.add("arrastado");
+        }
+    }
+
+    arraste.fantasma.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 12}px)`;
+    atualizarAlvo(e.clientX, e.clientY);
+}
+
+function limparMarcas() {
+    document.querySelectorAll("#programa .marca-antes, #programa .marca-depois").forEach(item => {
+        item.classList.remove("marca-antes", "marca-depois");
+    });
+}
+
+// Descobre em que posição da lista o comando seria solto
+function atualizarAlvo(x, y) {
+    const lista = document.getElementById("programa");
+    const caixa = lista.getBoundingClientRect();
+    const sobre = x >= caixa.left && x <= caixa.right && y >= caixa.top && y <= caixa.bottom;
+
+    limparMarcas();
+    lista.classList.toggle("sobre", sobre);
+    arraste.indice = null;
+
+    if (!sobre) return;
+
+    const itens = [...lista.children];
+    let indice = itens.findIndex(item => {
+        const r = item.getBoundingClientRect();
+        return y < r.top + r.height / 2;
+    });
+    if (indice === -1) indice = itens.length;
+
+    arraste.indice = indice;
+
+    if (indice < itens.length) itens[indice].classList.add("marca-antes");
+    else if (itens.length) itens[itens.length - 1].classList.add("marca-depois");
+}
+
+function finalizarArraste() {
+    window.removeEventListener("pointermove", moverArraste);
+    window.removeEventListener("pointerup", soltarArraste);
+    window.removeEventListener("pointercancel", finalizarArraste);
+
+    if (arraste && arraste.fantasma) arraste.fantasma.remove();
+    document.body.classList.remove("arrastando");
+
+    const lista = document.getElementById("programa");
+    lista.classList.remove("sobre");
+    limparMarcas();
+    [...lista.children].forEach(item => item.classList.remove("arrastado"));
+
+    arraste = null;
+}
+
+function soltarArraste() {
+    const a = arraste;
+    finalizarArraste();
+
+    if (!a || !a.ativo || executando) return;
+
+    if (a.origem === null) {
+        // veio da lista de comandos: insere onde foi solto
+        if (a.indice !== null) adicionarComando(a.comando, a.indice);
+        return;
+    }
+
+    // veio do programa: reordena (ou remove, se solto fora da área)
+    programa.splice(a.origem, 1);
+    if (a.indice !== null) {
+        const destino = a.indice > a.origem ? a.indice - 1 : a.indice;
+        programa.splice(destino, 0, a.comando);
+    }
+    prepararEdicao();
+    mostrarPrograma();
+}
+
+document.querySelectorAll("[data-comando]").forEach(botao => {
+    botao.addEventListener("pointerdown", e => iniciarArraste(e, botao.dataset.comando, null));
+    botao.addEventListener("click", e => {
+        if (e.detail === 0) adicionarComando(botao.dataset.comando);   // clique vindo do teclado
+    });
+});
+
+document.getElementById("programa").addEventListener("pointerdown", e => {
+    const alca = e.target.closest(".alca");
+    if (!alca) return;
+    const indice = Number(alca.closest(".comando").dataset.indice);
+    iniciarArraste(e, programa[indice], indice);
+    e.preventDefault();
+});
+
+
+// -------------------------
 
 
 // -------------------------
@@ -281,14 +457,18 @@ async function executar() {
     executando = true;
     mostrarMensagem("Executando...");
 
+    const id = ++contadorExec;
+
     for (const comando of programa) {
         await esperar(500);
-
+        if (id !== contadorExec) return;   // foi reiniciado
         executarComando(comando);
         desenharTabuleiro();
 
         if (venceu || caiuNoBuraco) break;
     }
+
+    if (id !== contadorExec) return;   // foi reiniciado no meio da execução
 
     executando = false;
 
@@ -363,35 +543,6 @@ function acender() {
 
 
 // -------------------------
-// LIMPAR PROGRAMA
-// -------------------------
-
-function limparPrograma() {
-    if (executando) return;
-    programa = [];
-    mostrarPrograma();
-    mostrarMensagem("");
-}
-
-
-// -------------------------
-// REINICIAR
-// -------------------------
-
-function reiniciar() {
-    fecharVitoria();
-    robo = { ...posicaoInicial };
-    programa = [];
-    venceu = false;
-    caiuNoBuraco = false;
-
-    mostrarPrograma();
-    posicionarRoboImediato();
-    mostrarMensagem("");
-}
-
-
-// -------------------------
 // UTILIDADE
 // -------------------------
 
@@ -432,7 +583,7 @@ document.getElementById("aviso").addEventListener("click", e => {
 });
 
 // Aviso que aparece ao abrir o nível (troque o texto ou apague esta linha)
-mostrarAviso("Nível 2", "Cuidado com os buracos, pois o robô pode cair!!!");
+mostrarAviso("Nível 2", "Agora você deve continuar usando os comandos básicos, porém deve tomar cuidado para que o robô não caia em nenhum buraco!");
 
 // -------------------------
 // JANELA DE VITÓRIA
