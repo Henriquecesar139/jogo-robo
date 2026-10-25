@@ -49,8 +49,8 @@ const niveis = [
     {
         numero: 5,
         titulo: "Continue repetindo",
-        conceito: "Repetição e Condição",
-        descricao: "Estruturas de repetição com condicionais",
+        conceito: "Repetição e condição",
+        descricao: "Mais estruturas de repetição",
         icone: "🔁",
         dificuldade: "Difícil",
         cor: "#f783ac",

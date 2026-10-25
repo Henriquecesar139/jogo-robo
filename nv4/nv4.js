@@ -248,7 +248,7 @@ function prepararEdicao() {
     mostrarMensagem("");
 }
 
-function adicionarComando(comando, indice = programa.length) {
+function adicionarComando(comando) {
     if (executando) return false;
 
     prepararEdicao();
@@ -258,7 +258,7 @@ function adicionarComando(comando, indice = programa.length) {
         return false;
     }
 
-    programa.splice(indice, 0, comando);
+    programa.push(comando);
     mostrarPrograma();
     return true;
 }
@@ -367,7 +367,6 @@ function mostrarPrograma() {
         if (indicesAbertos.includes(indice)) item.classList.add("erro");
         item.style.marginLeft = `${Math.min(nivel, 3) * 18}px`;
         item.innerHTML =
-            `<span class="alca" title="Arraste para mover" aria-hidden="true">⋮⋮</span>` +
             `<span class="num">${indice + 1}</span>` +
             `<span class="txt">${ROTULOS[comando]}</span>`;
         elemento.appendChild(item);
@@ -380,17 +379,17 @@ function mostrarPrograma() {
 // -------------------------
 // ARRASTAR E SOLTAR (mouse e toque)
 // -------------------------
-// 1) Arraste um comando da lista da esquerda para a área "Programa".
-// 2) Arraste pela alça ⋮⋮ para reordenar; solte fora da área para remover.
-// 3) Teclado: Enter/Espaço no botão do comando adiciona no final.
+// Arraste um comando da lista da esquerda para a área "Programa".
+// Ele sempre entra no final da lista: não dá para encaixar antes de outro comando.
+// Teclado: Enter/Espaço no botão do comando também adiciona no final.
 
-let arraste = null;   // { comando, origem, x, y, ativo, fantasma, indice }
+let arraste = null;   // { comando, x, y, ativo, fantasma, sobre }
 
-function iniciarArraste(e, comando, origem) {
+function iniciarArraste(e, comando) {
     if (executando) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
-    arraste = { comando, origem, x: e.clientX, y: e.clientY, ativo: false, fantasma: null, indice: null };
+    arraste = { comando, x: e.clientX, y: e.clientY, ativo: false, fantasma: null, sobre: false };
 
     window.addEventListener("pointermove", moverArraste);
     window.addEventListener("pointerup", soltarArraste);
@@ -413,46 +412,16 @@ function moverArraste(e) {
         arraste.fantasma = fantasma;
 
         document.body.classList.add("arrastando");
-
-        if (arraste.origem !== null) {
-            const itens = document.getElementById("programa").children;
-            if (itens[arraste.origem]) itens[arraste.origem].classList.add("arrastado");
-        }
     }
 
     arraste.fantasma.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 12}px)`;
-    atualizarAlvo(e.clientX, e.clientY);
-}
 
-function limparMarcas() {
-    document.querySelectorAll("#programa .marca-antes, #programa .marca-depois").forEach(item => {
-        item.classList.remove("marca-antes", "marca-depois");
-    });
-}
-
-// Descobre em que posição da lista o comando seria solto
-function atualizarAlvo(x, y) {
+    // está sobre a área do programa?
     const lista = document.getElementById("programa");
     const caixa = lista.getBoundingClientRect();
-    const sobre = x >= caixa.left && x <= caixa.right && y >= caixa.top && y <= caixa.bottom;
-
-    limparMarcas();
-    lista.classList.toggle("sobre", sobre);
-    arraste.indice = null;
-
-    if (!sobre) return;
-
-    const itens = [...lista.children];
-    let indice = itens.findIndex(item => {
-        const r = item.getBoundingClientRect();
-        return y < r.top + r.height / 2;
-    });
-    if (indice === -1) indice = itens.length;
-
-    arraste.indice = indice;
-
-    if (indice < itens.length) itens[indice].classList.add("marca-antes");
-    else if (itens.length) itens[itens.length - 1].classList.add("marca-depois");
+    arraste.sobre = e.clientX >= caixa.left && e.clientX <= caixa.right &&
+                    e.clientY >= caixa.top && e.clientY <= caixa.bottom;
+    lista.classList.toggle("sobre", arraste.sobre);
 }
 
 function finalizarArraste() {
@@ -462,11 +431,7 @@ function finalizarArraste() {
 
     if (arraste && arraste.fantasma) arraste.fantasma.remove();
     document.body.classList.remove("arrastando");
-
-    const lista = document.getElementById("programa");
-    lista.classList.remove("sobre");
-    limparMarcas();
-    [...lista.children].forEach(item => item.classList.remove("arrastado"));
+    document.getElementById("programa").classList.remove("sobre");
 
     arraste = null;
 }
@@ -475,37 +440,14 @@ function soltarArraste() {
     const a = arraste;
     finalizarArraste();
 
-    if (!a || !a.ativo || executando) return;
-
-    if (a.origem === null) {
-        // veio da lista de comandos: insere onde foi solto
-        if (a.indice !== null) adicionarComando(a.comando, a.indice);
-        return;
-    }
-
-    // veio do programa: reordena (ou remove, se solto fora da área)
-    programa.splice(a.origem, 1);
-    if (a.indice !== null) {
-        const destino = a.indice > a.origem ? a.indice - 1 : a.indice;
-        programa.splice(destino, 0, a.comando);
-    }
-    prepararEdicao();
-    mostrarPrograma();
+    if (a && a.ativo && a.sobre) adicionarComando(a.comando);   // sempre no final
 }
 
 document.querySelectorAll("[data-comando]").forEach(botao => {
-    botao.addEventListener("pointerdown", e => iniciarArraste(e, botao.dataset.comando, null));
+    botao.addEventListener("pointerdown", e => iniciarArraste(e, botao.dataset.comando));
     botao.addEventListener("click", e => {
         if (e.detail === 0) adicionarComando(botao.dataset.comando);   // clique vindo do teclado
     });
-});
-
-document.getElementById("programa").addEventListener("pointerdown", e => {
-    const alca = e.target.closest(".alca");
-    if (!alca) return;
-    const indice = Number(alca.closest(".comando").dataset.indice);
-    iniciarArraste(e, programa[indice], indice);
-    e.preventDefault();
 });
 
 
@@ -758,4 +700,4 @@ document.getElementById("vitoria").addEventListener("click", e => {
 });
 
 // Aviso ao abrir o nível (troque o texto ou apague esta linha)
-mostrarAviso("Nível 4", "agora em: Existem diferentes tipos de estrutura de repetição, algumas podem se repetir um determinado um número fixo de vezes ou podem se repetir até que alguma coisa aconteça. Use isso a seu favor para completar o nível!");
+mostrarAviso("Nível 4", "Vamos continuar praticando algorítmos sobre estrutuas de repetição.");
